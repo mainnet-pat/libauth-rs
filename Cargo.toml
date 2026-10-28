@@ -1,0 +1,360 @@
+[package]
+name = "libauth"
+version = "3.1.0-next.8"
+edition = "2021"
+rust-version = "1.90"
+description = "A zero-dependency Rust port of libauth v3.1.0-next.8"
+license = "MIT"
+publish = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+
+[lib]
+path = "src/index.rs"
+
+[dependencies]
+[dev-dependencies]
+[build-dependencies]
+
+[[bin]]
+name = "vm-bench"
+path = "tools/vm_bench.rs"
+
+[[example]]
+name = "dev-vmb-tests"
+path = "src/lib/vmb-tests/dev-vmb-tests.spec.helper.rs"
+
+[[example]]
+name = "export-vmb-test-results"
+path = "src/lib/vmb-tests/export-vmb-test-results.spec.helper.rs"
+
+[[example]]
+name = "run-live-bch-vmb-test"
+path = "src/lib/vmb-tests/run-live-bch-vmb-test.spec.helper.rs"
+
+[[example]]
+name = "run-bch-vmb-test"
+path = "src/lib/vmb-tests/run-bch-vmb-test.spec.helper.rs"
+
+# Tests execute a WebAssembly interpreter; optimize test builds so the mandatory
+# VMB suite is practical to run.
+[profile.test]
+opt-level = 3
+
+[profile.dev]
+opt-level = 2
+
+# libauth's `*.spec.ts` files, ported as `*.spec.rs` beside them. Target names
+# are the spec file stems with `.` replaced by `-`.
+[[test]]
+name = "base64"
+path = "src/lib/format/base64.spec.rs"
+
+[[test]]
+name = "hex"
+path = "src/lib/format/hex.spec.rs"
+
+[[test]]
+name = "compile"
+path = "src/lib/language/compile.spec.rs"
+
+[[test]]
+name = "language-utils"
+path = "src/lib/language/language-utils.spec.rs"
+
+[[test]]
+name = "parse"
+path = "src/lib/language/parse.spec.rs"
+
+[[test]]
+name = "reduce"
+path = "src/lib/language/reduce.spec.rs"
+
+[[test]]
+name = "resolve"
+path = "src/lib/language/resolve.spec.rs"
+
+[[example]]
+name = "generate-templates"
+path = "src/lib/transaction/fixtures/generate-templates.spec.helper.rs"
+
+[[test]]
+name = "compiler-bch-e2e-built-in-variables"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.built-in-variables.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-data-signatures"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.data-signatures.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-evaluations"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.evaluations.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-hd-key"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.hd-key.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-key"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.key.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-langauge"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.langauge.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-p2sh"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.p2sh.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-signing-serialization-algorithms"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.signing-serialization-algorithms.spec.rs"
+
+[[test]]
+name = "compiler-bch-e2e-variables"
+path = "src/lib/compiler/compiler-bch/compiler-bch.e2e.variables.spec.rs"
+
+[[test]]
+name = "compiler-bch-operations"
+path = "src/lib/compiler/compiler-bch/compiler-bch-operations.spec.rs"
+
+[[test]]
+name = "compiler-operation-helpers"
+path = "src/lib/compiler/compiler-operation-helpers.spec.rs"
+
+[[test]]
+name = "compiler"
+path = "src/lib/compiler/compiler.spec.rs"
+
+[[test]]
+name = "p2pkh-utils"
+path = "src/lib/compiler/p2pkh-utils.spec.rs"
+
+[[test]]
+name = "transaction-e2e-templates"
+path = "src/lib/transaction/transaction-e2e.templates.spec.rs"
+
+[[test]]
+name = "generate-transaction"
+path = "src/lib/transaction/generate-transaction.spec.rs"
+
+[[test]]
+name = "transaction-e2e-p2pkh"
+path = "src/lib/transaction/transaction-e2e.p2pkh.spec.rs"
+
+[[test]]
+name = "transaction-e2e-2-of-3"
+path = "src/lib/transaction/transaction-e2e.2-of-3.spec.rs"
+
+[[test]]
+name = "transaction-e2e-sig-of-sig"
+path = "src/lib/transaction/transaction-e2e.sig-of-sig.spec.rs"
+
+[[test]]
+name = "transaction-e2e-2-of-2-recoverable"
+path = "src/lib/transaction/transaction-e2e.2-of-2-recoverable.spec.rs"
+
+[[test]]
+name = "p2pkh"
+path = "src/lib/compiler/standard/p2pkh.spec.rs"
+
+[[test]]
+name = "scenarios"
+path = "src/lib/compiler/scenarios.spec.rs"
+
+[[test]]
+name = "compiler-bch"
+path = "src/lib/compiler/compiler-bch/compiler-bch.spec.rs"
+
+[[test]]
+name = "base58-address"
+path = "src/lib/address/base58-address.spec.rs"
+
+[[test]]
+name = "bech32"
+path = "src/lib/address/bech32.spec.rs"
+
+[[test]]
+name = "cash-address"
+path = "src/lib/address/cash-address.spec.rs"
+
+[[test]]
+name = "locking-bytecode"
+path = "src/lib/address/locking-bytecode.spec.rs"
+
+[[test]]
+name = "secp256k1-wasm"
+path = "src/lib/bin/secp256k1/secp256k1-wasm.spec.rs"
+
+[[test]]
+name = "combinations"
+path = "src/lib/crypto/combinations.spec.rs"
+
+[[test]]
+name = "hmac"
+path = "src/lib/crypto/hmac.spec.rs"
+
+[[test]]
+name = "pbkdf2"
+path = "src/lib/crypto/pbkdf2.spec.rs"
+
+[[test]]
+name = "ripemd160"
+path = "src/lib/crypto/ripemd160.spec.rs"
+
+[[test]]
+name = "secp256k1"
+path = "src/lib/crypto/secp256k1.spec.rs"
+
+[[test]]
+name = "sha1"
+path = "src/lib/crypto/sha1.spec.rs"
+
+[[test]]
+name = "sha256"
+path = "src/lib/crypto/sha256.spec.rs"
+
+[[test]]
+name = "sha512"
+path = "src/lib/crypto/sha512.spec.rs"
+
+[[test]]
+name = "base-convert"
+path = "src/lib/format/base-convert.spec.rs"
+
+[[test]]
+name = "bin-string"
+path = "src/lib/format/bin-string.spec.rs"
+
+[[test]]
+name = "error"
+path = "src/lib/format/error.spec.rs"
+
+[[test]]
+name = "log"
+path = "src/lib/format/log.spec.rs"
+
+[[test]]
+name = "number"
+path = "src/lib/format/number.spec.rs"
+
+[[test]]
+name = "read"
+path = "src/lib/format/read.spec.rs"
+
+[[test]]
+name = "time"
+path = "src/lib/format/time.spec.rs"
+
+[[test]]
+name = "utf8"
+path = "src/lib/format/utf8.spec.rs"
+
+[[test]]
+name = "bip39"
+path = "src/lib/key/bip39.spec.rs"
+
+[[test]]
+name = "hd-key"
+path = "src/lib/key/hd-key.spec.rs"
+
+[[test]]
+name = "key-utils"
+path = "src/lib/key/key-utils.spec.rs"
+
+[[test]]
+name = "wallet-import-format"
+path = "src/lib/key/wallet-import-format.spec.rs"
+
+[[bench]]
+name = "hash-browser-bench"
+path = "src/lib/crypto/hash.browser.bench.rs"
+harness = false
+
+[[bench]]
+name = "ripemd160-bench"
+path = "src/lib/crypto/ripemd160.bench.rs"
+harness = false
+
+[[bench]]
+name = "secp256k1-bench"
+path = "src/lib/crypto/secp256k1.bench.rs"
+harness = false
+
+[[bench]]
+name = "sha1-bench"
+path = "src/lib/crypto/sha1.bench.rs"
+harness = false
+
+[[bench]]
+name = "sha256-bench"
+path = "src/lib/crypto/sha256.bench.rs"
+harness = false
+
+[[bench]]
+name = "sha512-bench"
+path = "src/lib/crypto/sha512.bench.rs"
+harness = false
+
+[[bench]]
+name = "number-bench"
+path = "src/lib/format/number.bench.rs"
+harness = false
+
+[[test]]
+name = "read-components"
+path = "src/lib/message/read-components.spec.rs"
+
+[[test]]
+name = "transaction-encoding"
+path = "src/lib/message/transaction-encoding.spec.rs"
+
+[[test]]
+name = "bcmr"
+path = "src/lib/schema/bcmr.spec.rs"
+
+[[test]]
+name = "mappings"
+path = "src/lib/mappings.spec.rs"
+
+[[test]]
+name = "instruction-sets-utils"
+path = "src/lib/vm/instruction-sets/common/instruction-sets-utils.spec.rs"
+
+[[test]]
+name = "push"
+path = "src/lib/vm/instruction-sets/common/push.spec.rs"
+
+[[test]]
+name = "types"
+path = "src/lib/vm/instruction-sets/common/types.spec.rs"
+
+[[test]]
+name = "xec"
+path = "src/lib/vm/instruction-sets/xec/xec.spec.rs"
+
+[[test]]
+name = "virtual-machine"
+path = "src/lib/vm/virtual-machine.spec.rs"
+
+[[test]]
+name = "bch-vmb-test-utils"
+path = "src/lib/vmb-tests/bch-vmb-test-utils.spec.rs"
+
+[[test]]
+name = "docs"
+path = "src/lib/docs.spec.rs"
+
+[[test]]
+name = "wallet-template"
+path = "src/lib/schema/wallet-template.spec.rs"
+
+[[test]]
+name = "signing-serialization"
+path = "src/lib/vm/instruction-sets/common/signing-serialization.spec.rs"
+
+[[test]]
+name = "xec-script-tests"
+path = "src/lib/vm/instruction-sets/xec/xec.script-tests.spec.rs"

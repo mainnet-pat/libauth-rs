@@ -1,0 +1,262 @@
+//! Port of `crypto/ripemd160.spec.ts`.
+
+#[path = "hash.spec.helper.rs"]
+mod hash_spec_helper;
+
+use hash_spec_helper::TestHashFunction;
+use libauth::{get_embedded_ripemd160_binary, instantiate_ripemd160, instantiate_ripemd160_bytes};
+
+#[rustfmt::skip]
+const ABC_HASH: [u8; 20] = [142, 178, 8, 247, 224, 93, 152, 122, 155, 4, 74, 142, 152, 198, 176, 135, 241, 90, 11, 252];
+
+#[rustfmt::skip]
+const TEST_HASH: [u8; 20] = [94, 82, 254, 228, 126, 107, 7, 5, 101, 247, 67, 114, 70, 140, 220, 105, 157, 232, 145, 7];
+
+#[rustfmt::skip]
+const LIBAUTH_HASH: [u8; 20] = [110, 49, 102, 23, 96, 92, 29, 1, 244, 107, 255, 233, 7, 87, 156, 120, 131, 157, 28, 239];
+
+/// Substitution for Node.js's `createHash('ripemd160')`: the digests it produces
+/// for the 100 fixed messages of `FixedInputs::new(NODE_JS_SEED)` (see
+/// `hash.spec.helper.rs`), computed in Node.js.
+const NODE_JS_DIGESTS: [&str; 100] = [
+    "16b738274181149428c42aa1a85245c91ad988d9",
+    "d8062d13e87da48aecd0ede0187ab5f004ab6798",
+    "de390287819202cac725be0002f6d9baa50ae1f1",
+    "e41a67e964b99649c10ee77b8000afb69250a425",
+    "3ca4665382337fdeebc30a4ee0e2431a3fea3f45",
+    "81f1c114b0487eb5670d2195a6f088e3f4ed902b",
+    "4d3e6b08c5cf542f6a18af5f1ccf7539d3ac283b",
+    "a018e36d17d79c39b2030d04c1d3ef87c30ee18c",
+    "d3ddd4dd04bb759e75dcc3a5ae9c5d497f8a76d7",
+    "f477de09aad8ab208b2c0f9de70140f440667490",
+    "f239c159594dfd74ef6d2214a82a27b995cff4de",
+    "65ad37c81061d7726a0c4b72184980162b836af2",
+    "3f7aff553283a3bdee61dac1cb6fb786c0738681",
+    "00e7ca68b356d3b711bfd3c0ad1f138a5668c505",
+    "4a682d2d117ba2e3a696a0d01091d711d66166d7",
+    "6ea397c0b9655e9857c35f34b27f17042af3b34e",
+    "0b4c1397f505d3e3caf7790a8f5270cbdf515a76",
+    "0d3b149afd589a122964347cae3e07836f9f39e3",
+    "c4e44b0608e32a47adeaad1e4fccb121d4109184",
+    "0883e3af2cf84686918a499ef85db76152affcd3",
+    "7df2f5a3d0ab89b88af17d0c53c8726123b15f7f",
+    "805ad29147459e4671b176c586af0ace15214093",
+    "24bcc1fa516bf4072b34c2ebf8b06db8b67c7055",
+    "fcf9d4363b0a82b97d36a15bf8e86b4920c928d2",
+    "1f0b2f06ba2cb10663adfc415a018c28d7d49c21",
+    "229dc4c86d76344016e837e1bdddc92c59a9cab2",
+    "b66bfbc18adc37d7b764e5d04a0c3f3ec6c236ea",
+    "c5bfe117d33e9dcc8c11e118d79fa4c665be0e9c",
+    "113a8ef22c7dfd15d296550ae111251d6e05fd69",
+    "f2a7f48f7c37fc7fb1a13fbbcecbba48db8924ec",
+    "2afa872a5ef055df0d0478ee6c7861372345dee1",
+    "31b39cc386b0d3a7a4e89846b7dc832696f47131",
+    "050a57f13a24e0f9f1b172fbd044832fd76641e8",
+    "eadcd740f82f117ce667c9c00da934f003cee285",
+    "141f92192d6fb93100b37c1177b88d87d8020d58",
+    "a5ff744b7cced12deb7ed18d961f24522d85414e",
+    "b89420ac42e9c8e241a34350321f25e0a2a318b0",
+    "ff289fa1d220fcf7ff2fe27fadab67541c6779c3",
+    "ee49202f13030ff57ef565258350526201fc0c7f",
+    "38fdac2ce824928b9aa8fb8a1009b70d8d52644d",
+    "c179ef5ade9701e78d7ebb2b4a7cd1a77f6e22d1",
+    "1c7b1e85bcb62c249c3de4b5140699a0db415b11",
+    "4ca571f27616718b6f9c0bcb2ed581e03e8b2f17",
+    "85b770923897622d32fce507ecc876e42d7e8826",
+    "60911cb7b795900d93fad671e7459c3540ac4d62",
+    "8525f0db49c9b901b75f3c2f87fd93cd51734a83",
+    "0c0b6139835ee489d0385463d371cc5fb38ddb29",
+    "8960ebe06dadb9738fb0a98e8e83adbf2eb50106",
+    "306f80bcd0daf13b38af259894675cdb0bbf00f5",
+    "b8e7159c4ec88bad141719bac70b42226cf491b9",
+    "390c0f07146c5a04e4f66cc1a3a7d3974797bf16",
+    "3f7ee2ff29eb0e617bb6f13accc79f80fcceeae7",
+    "247ba506f4f8ac06e5d8340f9a8051e66e15f762",
+    "6b33e3d57fb347ce1e54dc47feb7d6cc6be586a8",
+    "8225660129561e93330a6afd31f69901bf2e1ca4",
+    "99e00d9a6f5f40ba5d4e6c4695359f2a3cd36706",
+    "9b8185b6803909b1ecb786059a2eeebf73bd66c8",
+    "325b1bd66c709c33cdd0dc99e091b4e0e5efa877",
+    "72d8b911b735551c78da8396c2ec1f5f19b9af7c",
+    "53f730467249635788b8d65a83a31251dd160c05",
+    "6d12d5852afef910856f81a608e1068d6b575b40",
+    "528beb1fa113eadf5e22ca23e61131c553a06ed9",
+    "53dbaa7f9426aede7c57306ba7a63bbd72c3542b",
+    "c765cf8337669108145f3de93b3a830bf7b091bf",
+    "c5b44f1e79b2d6f0803c775272fafddea7be8b87",
+    "d902e9630f6b4648bbb5ac6b59ae2649b7426d51",
+    "823e227f74137c021bd6c0fdc7e1f67a346e396b",
+    "d3f2ae1ee3f05e0a10689c9aa09ac37757c6e039",
+    "c5d5796fe636ca273201dc8f19080aadd2243478",
+    "7083b2aeaac96b3c60325efbfc008e17c71bcca4",
+    "81eada62262b9fe043397b276b487ad322b0b9d1",
+    "81c642449334e5001208abc76fbb441e2c71065a",
+    "9930c382bcf2167f09ea42311d9064efe0f59a18",
+    "7d8ccf7560a1f425545270974af7639476979f35",
+    "eb1a14f834101d7bb8661f7d041d247673f9b242",
+    "29b43dd0c8e4bc9e98ad3675c464b1e41c32a3a1",
+    "48b19fd84b53c7c1d19b0f6ef4b456958b6049cd",
+    "bcc7677ffc02d2b7c28e2b2b0db763af09e3fa0d",
+    "9b4dcca8ab9f3f30114344fad075a864ed4a0eeb",
+    "317f543d4c95860ea0f79450782e4c14afa17bae",
+    "58b854d8bed609808e49fa2c06e77efea5fda7cf",
+    "da9bc48e29792a1c5cae9b95441facc7ae3def3f",
+    "43b376a1c92c59734c9e6086a789afbbfabec5b9",
+    "667c63e3d82f93a3fe04378d1b5aba621a015955",
+    "5554aa5819d782695da5d07d9c381555a73ef13c",
+    "cf3a5bc54dd7c5fe86a173e932ff76d81c776a50",
+    "a3f176f9cadcd4cc75744429b725ffd78867a015",
+    "ead425e93d91350c01e8452ec8073ac4c194a740",
+    "9249c5fdb59289e2a032eed156bf2ece60ca6bc1",
+    "c0096082486ce890441e59c0120b2abc5c055ecb",
+    "568de7bb890a237a1e74090fa006f6d454a67eb7",
+    "effee77da0c163b51760135d7329c831d9298066",
+    "2e25b4fc01227aa29316e49e65ee9a5e3a692dd2",
+    "4e323ad4214a99ec085012087b7c2b515f6de317",
+    "319fa2e19487487722950fc4cb1b4d663cdc6f5c",
+    "9951ca0216598f01b60ca38cbc62dd3438cfd908",
+    "2b4b3d85c61a7d96895b3209fb0358690e7d9e7c",
+    "0dc8624a17f5b9166953a3d1ac0f3915da5a4abd",
+    "5fafe29e96d1852d201d91544cc15ac4bf7307f4",
+    "e6dbaf76d9d8b09e874eef6bd27b0d3d9e89ba8a",
+];
+
+/// Substitution for `hash.js` (`hashJs.ripemd160()`): the digests it produces for
+/// the 100 fixed messages of `FixedInputs::new(HASH_JS_SEED)` (see
+/// `hash.spec.helper.rs`), computed in Node.js.
+const HASH_JS_DIGESTS: [&str; 100] = [
+    "9a29e8d8d77434184fc7a082634eaf580af9be9d",
+    "5f4d6127acf94503628f44c7741d079a63b3d400",
+    "819e6b75d1eca01a818c059f1b9f059e1211eed8",
+    "503770825ec263ebeb468ee6de996d3765414783",
+    "acfd7f1ac7dbf40843c1ef73f71bc66de0e6e422",
+    "ff5d0677e1fefb77cded02bd7bf9361b28cc18b6",
+    "874ef04c2a4aa6d4d5ea3ab039b1908245a94c32",
+    "304634cd451a233785f6778460a0ddd5d2df88d6",
+    "d1febabedbc19ce6210ad42e23f059c89baf975b",
+    "958b097885f82d82bd0db9385dfd0186e56e1826",
+    "a2011d6e2f661389c3f219acdccecdea3eb3bc8e",
+    "8ed67f93bec32a76ecc31a8359cb519b79ce42a7",
+    "2fc40271009725975be60776bdd44fbd3557c90f",
+    "ac22bcfee1df510e90810c982262c85881dd502c",
+    "960295b23c48a7c033578933fe2e72cb736d79dc",
+    "cc18b64ccd18921c583e3c1ed7c2b913adc7d284",
+    "637120f3ecf10c9df6d9a12712cd5b0a2c326e93",
+    "b9900f85ed276393d0e63eb6a1654cacad9b0650",
+    "16d458f3f1baee859ecc6138045af6c308232697",
+    "0cc554abdbe5de5fd9fdd63d9ac66adb0b1bd863",
+    "3086921b8db58b1b8a455123ec9f4cf8b2910602",
+    "1daf9a7689d54150a1d0d5b11ba172e782a02721",
+    "7130c86be65465b6459cdd64c1f85de5696a7fa3",
+    "e6023492654835a9557d26dcc94b20612862af45",
+    "1ef07a75ee16478c1f4ae42f3c0efa5b1fb029bb",
+    "5a996d2111d2a58d043f6a244325e37e38ca4794",
+    "f3a81f3b995143630262bcfa53b12e3dfa8afe0b",
+    "f2bbb7fecf30f9bbaf5ffced5547c4387949b395",
+    "d46667d79ec294ee45bc1388e3727763ceee6923",
+    "b4029b296631b9ffa72047b5477be1e168d9ffcc",
+    "5b3b21bd7cbd29efe0ad197ffee16fa1af609e00",
+    "6c5e629e9c56b3c73d339109ccf3ecde0cc89fc8",
+    "5f1fa1928afc23174ca53f68f6f7eba5bfd6a5ba",
+    "e89d69e2ae0d8de994486dca959f0064385dcfac",
+    "d975a45e41d53871d289e9534a1e3d4f17505129",
+    "f5925ebce64a35935ecc33216669dda010572555",
+    "cedb9407f1bda81c83ab274f449bf27f158567b5",
+    "f474bc3afa2e64410ddf2806956e9aecbcd21304",
+    "cb45d57e43d04043942a82ce18d77a1bf1dd66ed",
+    "93de5de218baa67bace12b32df4425c0f950eacc",
+    "376516545cbcab497b4e7a396243294dd641bb81",
+    "0ed6cc1f9188628af314fdca2329d5b84f3801fa",
+    "19d25ea0d6e18815880948cbea4618c56e8acca3",
+    "f1d4fb3fe4bf3a817bd47eab78db467b4f200fa9",
+    "d004fdd3b0ef31f7cef0477f84e264b663897d36",
+    "cd8fed2d615283a1083d2881ed1673deb0a20ea9",
+    "e09c0729852a4adb1ff6f86960e3e131f8239219",
+    "dc9fc439389d59382bead660619dc5e22b576a40",
+    "eaeddf725cd7846158724c03921bb1c9118a7d75",
+    "f5876bb031e834a0f1c89b80debe9cd9b994dfc2",
+    "a56b9ce73cbd02e3d395040fb0752d784467e7ad",
+    "51b9b361ff2099fe1d5d09ebb19112ad3b310b38",
+    "358e37719d0060ced4d72ecbedddc84d17e92de1",
+    "ca8b4c59586c720533b3431607761f22b9ab75fe",
+    "32e95a60650ee35c851d8cd7d83ccc77faa9aa8e",
+    "e9515f99502661b61ddc6b89b68f6fa5cdce1663",
+    "9fb4dae73baf4c3e15eacfedda43773489f4275d",
+    "d59584f2bd061f706b46ac07c78f207a6b1b764c",
+    "d638e48be12c2cea2911c4abc6774ee855975d8d",
+    "9d4015025e3e89dcd1778991b97c19cec4aa8835",
+    "61476c80c2cce8feffccc361dd6e996717ca4aba",
+    "33753aa93fe98465d31deaa5a5872421f1c9b915",
+    "e535c197cf3f27bd993c8faeb8384e790701ba81",
+    "6c2d42b8dff9b81f770234cfd489a3c696d72ace",
+    "295be456088a175061f63f6dd958c7b155266a07",
+    "d0d6e71e49307ccc2a0e8444ee4f4e48b1ac6091",
+    "4fa526076e53f8d68af20f4272a0c80a9532201d",
+    "484f93283d88daae069f0a3e6807143a1d0deae5",
+    "f29163cf192a24eebe5c8174cfbffeae04c2ebbf",
+    "3d0a869d110e4d9026bc54b67fbd44934b18714b",
+    "2a16eb5c86ffc4bc45a2d24fb08dbbb28a7de2e8",
+    "3d0ebf8af164d6aa7228d5d08925225787e19c68",
+    "f9c435beffe2242911f00c7f0f0aa75ced50a009",
+    "8a371aa9eb3c1c8a7e0bb087c5cbbf168abe6c3e",
+    "cca4be2ef450498aa4afac714aa57bfe21400ca3",
+    "920859bab8b72dcf32c9761a0627269f53ddc5af",
+    "b89350001476b7e6928cfc3805717cb765825b37",
+    "2c8b83b093c2553b3cd82fcaec423ed2fef65599",
+    "05551188a26781ba383e11006313366cc436cb82",
+    "e3c188fd0b2fdc0afba5c10d93b2d4cd2da776de",
+    "55efe8abd33e98a12511de3eb4f20dae88406743",
+    "fce52685448631f63eda6640e1d7d6eedee67e24",
+    "00169f41ad86f7a40ac27e7d902a8fc4c3254a8c",
+    "3bf5c453b69bb820bbc3a4fa2db6fdbb0d76b4b5",
+    "be48996bb62c8de574493f94da8b1a81f9d5d297",
+    "0f8fa3ddebefe4e90ede061e6a3cbe2c2e445841",
+    "3d8700f4e6536225b1ba4ab89953a4c3ab962f84",
+    "92d36476ab0fa08517f14eca6cf84bc504e9a3b9",
+    "f77a7e2ca970a3fae3203f57ff4c867b78d722e2",
+    "55c428b9ff3b10fc80795ae51c106f8d54680b0e",
+    "123e18e50e0dcb1fb160ee14e01ef4e62fb96772",
+    "ff107c33e951b9ad61c14d83486e3de31899982b",
+    "65ca5d36cb3a4ea1d1b4e23c004782a41a6232ff",
+    "db788bd8c605250728ca566c9f7e2c2fcbe50436",
+    "db635b1937bdcd6f05976bc71f67bd4c4787829d",
+    "5b522b34381b00e5fdd1eff779c73a46ec85568c",
+    "cabecb4f0e6ba5dd685db8f39f31a3fae417bd5b",
+    "c1b8847363d7f86d8ae4d388735074aba8860bdb",
+    "2943cbf2d9fe98531351dbc19c0ae83116c9fbb9",
+    "081f1d481c73c13c63fd8a6cb06f537cbae6c5ae",
+];
+
+/// `testHashFunction<Ripemd160>({ ... })`
+const PARAMETERS: TestHashFunction = TestHashFunction {
+    abc_hash: &ABC_HASH,
+    get_embedded_binary: get_embedded_ripemd160_binary,
+    hash_function_name: "ripemd160",
+    instantiate: instantiate_ripemd160,
+    instantiate_bytes: instantiate_ripemd160_bytes,
+    libauth_hash: &LIBAUTH_HASH,
+    node_js_algorithm: "ripemd160",
+    node_js_digests: &NODE_JS_DIGESTS,
+    hash_js_digests: &HASH_JS_DIGESTS,
+    test_hash: &TEST_HASH,
+};
+
+#[test]
+fn crypto_ripemd160_get_embedded_binary_returns_the_proper_binary() {
+    hash_spec_helper::get_embedded_binary_returns_the_proper_binary(&PARAMETERS);
+}
+
+#[test]
+fn crypto_ripemd160_instantiated_with_embedded_binary() {
+    hash_spec_helper::instantiated_with_embedded_binary(&PARAMETERS);
+}
+
+#[test]
+fn fast_check_crypto_ripemd160_instantiated_with_bytes() {
+    hash_spec_helper::instantiated_with_bytes(&PARAMETERS);
+}
+
+#[test]
+fn crypto_ripemd160_incremental_hashing() {
+    hash_spec_helper::incremental_hashing(&PARAMETERS);
+}

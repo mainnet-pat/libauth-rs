@@ -1,0 +1,35 @@
+node_modules
+build
+test
+src/**.js
+temp
+docs/markdown
+coverage
+.nyc_output
+*.log
+report.*.json
+scratch
+gitignore.*
+*.cpuprofile
+.aidigestignore
+codebase.md
+src/lib/vmb-tests/export
+src/lib/vmb-tests/generated/.vmb-*
+src/lib/vmb-tests/generated/**/*bench.csv
+src/lib/vmb-tests/generated/bch_chip_*
+.DS_Store
+
+src/lib/bin/**/*.html
+src/lib/bin/**/*.js
+src/lib/bin/**/*.d.ts
+src/lib/bin/**/*.wast
+src/lib/bin/**/*.wat
+src/lib/bin/**/*.map
+
+package-lock.json
+
+# libauth-rs: Rust build output, local git worktrees, and the generated VMB
+# tests (which libauth tracks, apart from the rules above)
+/target
+.worktrees/
+src/lib/vmb-tests/generated
