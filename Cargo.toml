@@ -25,6 +25,10 @@ sha2 = { version = "0.10", features = ["compress"] }
 [build-dependencies]
 
 [[bin]]
+name = "crypto-bench"
+path = "tools/crypto_bench.rs"
+
+[[bin]]
 name = "vm-bench"
 path = "tools/vm_bench.rs"
 

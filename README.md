@@ -38,7 +38,9 @@ Not mirrored:
   `fast-check` dev-dependency, used by the property-based specs.
 - `tools/vm_bench.rs` (the `vm-bench` binary), `tools/bench-vm.mjs`, and
   `tests/fixtures/vm_benchmark_program.json` benchmark this port's VM against
-  libauth's (see [VM benchmark](#vm-benchmark)).
+  libauth's (see [VM benchmark](#vm-benchmark)), and `tools/crypto_bench.rs`
+  (the `crypto-bench` binary) and `tools/bench-crypto.mjs` benchmark its
+  cryptography. Results are in `BENCH.md`.
 - libauth's `src/lib/bin/` holds WebAssembly builds of its hash functions and
   of libsecp256k1, embedded as base64; this port implements them natively in
   `src/lib/crypto/` (see [Native cryptography](#constraints)), so only
@@ -134,8 +136,8 @@ node tools/bench-vm.mjs tests/fixtures/vm_benchmark_program.json 500 30
 
 Both harnesses print per-iteration mean, median, standard deviation, 95%
 confidence interval, and p90/p99. Pass `--cpu` to measure CPU time instead of
-wall time (Rust reports the evaluating thread; Node reports the process). See the
-goal plan for measured results; timings depend on the host and load.
+wall time (Rust reports the evaluating thread; Node reports the process). See
+`BENCH.md` for measured results; timings depend on the host and load.
 
 ## Deviations
 
