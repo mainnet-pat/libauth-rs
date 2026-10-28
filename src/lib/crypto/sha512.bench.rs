@@ -11,6 +11,6 @@ use libauth::instantiate_sha512;
 
 fn main() {
     // benchmarkHashingFunction<Sha512>('sha512', instantiateSha512(), 'sha512');
-    let hash_function = instantiate_sha512().expect("the embedded binary instantiates");
+    let hash_function = instantiate_sha512();
     benchmark_hashing_function("sha512", &hash_function, "sha512");
 }

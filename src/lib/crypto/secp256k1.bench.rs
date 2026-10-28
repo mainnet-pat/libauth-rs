@@ -234,7 +234,7 @@ fn verify_schnorr_vs_ecdsa(secp256k1: &Secp256k1) {
 
 fn main() {
     // const secp256k1Promise = instantiateSecp256k1();
-    let secp256k1 = instantiate_secp256k1(None).expect("the embedded binary instantiates");
+    let secp256k1 = instantiate_secp256k1(None);
     verify_signature_low_s_uncompressed_pubkey(&secp256k1);
     verify_signature_low_s_compressed_pubkey(&secp256k1);
     derive_compressed_pubkey(&secp256k1);

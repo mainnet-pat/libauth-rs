@@ -1,76 +1,49 @@
-use crate::runtime::webassembly::{parse_module, HostImports, Instance, PerThread, Trap};
+//! libauth's `HashFunction` type.
+//!
+//! libauth instantiates its hash functions from Rust-compiled WebAssembly
+//! (`instantiateRustWasm`). This port implements them natively (see
+//! `crypto/sha256.rs` and the other hash modules), so this module provides only
+//! the `HashFunction` type and the incremental hashing state they share.
 
-/// Initial memory for the hash module; the module's own allocator grows it.
-const HASH_MODULE_MEMORY_BYTES: usize = 0;
-
-/// The interface of a hash function instantiated by {@link instantiateRustWasm}
-/// (libauth's `HashFunction` object: `final`, `hash`, `init`, and `update`).
+/// An object of hash functions (libauth's `HashFunction`). To incrementally
+/// construct a hash (e.g. for streaming), use `init`, `update`, and `final`.
 ///
-/// Each thread that uses a `HashFunction` runs its own instance of the
-/// WebAssembly module (see `PerThread`), as each JavaScript agent would.
-#[derive(Clone)]
+/// The members are function pointers, so custom implementations (e.g. mocks)
+/// can be provided.
+#[derive(Clone, Copy)]
 pub struct HashFunction {
-    engine: PerThread<HashEngine>,
-}
-
-struct HashEngine {
-    instance: Instance,
-    hash_export: u32,
-    init_export: u32,
-    update_export: u32,
-    final_export: u32,
-    global_argument_ptr: u32,
-}
-
-/// Reports a `__wbindgen_throw` from the module, as libauth does.
-struct WbindgenHost;
-
-impl HostImports for WbindgenHost {
-    fn call(
-        &mut self,
-        instance: &mut Instance,
-        name: &str,
-        args: &[u64],
-    ) -> Result<Option<u64>, Trap> {
-        match name {
-            "__wbindgen_throw" => {
-                let pointer = args.first().copied().unwrap_or(0) as u32;
-                let length = args.get(1).copied().unwrap_or(0) as u32;
-                let message = instance
-                    .memory_slice(pointer, length)
-                    .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
-                    .unwrap_or_else(|_| "wasm-bindgen throw".to_string());
-                Err(Trap(message))
-            }
-            other => Err(Trap(format!("Unsupported host import: {other}"))),
-        }
-    }
+    /// Finish an incremental hash computation, returning the final hash.
+    pub r#final: fn(raw_state: &[u8]) -> Vec<u8>,
+    /// Returns the hash of the provided input.
+    pub hash: fn(input: &[u8]) -> Vec<u8>,
+    /// Begin an incremental hash computation, returning the raw state.
+    pub init: fn() -> Vec<u8>,
+    /// Add input to an incremental hash computation, returning the new raw
+    /// state.
+    pub update: fn(raw_state: &[u8], input: &[u8]) -> Vec<u8>,
 }
 
 impl HashFunction {
     /// Finish an incremental hash computation, returning the final hash.
-    ///
-    /// As in libauth, `raw_state` is updated in place with the module's copy of
-    /// the state.
-    pub fn r#final(&self, raw_state: &mut [u8]) -> Vec<u8> {
-        self.engine.with(|engine| engine.finalize(raw_state))
+    pub fn r#final(&self, raw_state: &[u8]) -> Vec<u8> {
+        (self.r#final)(raw_state)
     }
 
     /// Returns the hash of the provided input. To incrementally construct a
     /// hash (e.g. for streaming), use `init`, `update`, and `final`.
     pub fn hash(&self, input: &[u8]) -> Vec<u8> {
-        self.engine.with(|engine| engine.hash(input))
+        (self.hash)(input)
     }
 
     /// Begin an incremental hash computation, returning the raw state.
     pub fn init(&self) -> Vec<u8> {
-        self.engine.with(HashEngine::init)
+        (self.init)()
     }
 
     /// Add input to an incremental hash computation, returning the new raw
-    /// state. As in libauth, `raw_state` is also updated in place.
-    pub fn update(&self, raw_state: &mut [u8], input: &[u8]) -> Vec<u8> {
-        self.engine.with(|engine| engine.update(raw_state, input))
+    /// state.
+    pub fn update(&self, raw_state: &[u8], input: &[u8]) -> Vec<u8> {
+        (self.update)(raw_state, input)
     }
 }
 
@@ -80,188 +53,97 @@ impl core::fmt::Debug for HashFunction {
     }
 }
 
-/// Instantiate a WebAssembly hash function module built with `wasm-bindgen`
-/// (as libauth's hash function modules are), returning a {@link HashFunction}.
+/// A Merkle–Damgård hash function, providing the incremental `init`, `update`,
+/// and `final` functions of a {@link HashFunction}.
 ///
-/// `expected_import_module_name` must match the module named by every
-/// function import (libauth's payloads import from `./sha256`, etc.), and each
-/// of the four export names must be exported by the module. Failures are
-/// reported with the wording used by `WebAssembly.instantiate` (`module is not
-/// an object or function`) and by missing exports (`Missing export`).
-pub fn instantiate_rust_wasm(
-    webassembly_bytes: &[u8],
-    expected_import_module_name: &str,
-    hash_export_name: &str,
-    init_export_name: &str,
-    update_export_name: &str,
-    final_export_name: &str,
-) -> Result<HashFunction, String> {
-    let bytes = std::sync::Arc::new(webassembly_bytes.to_vec());
-    let names = [
-        expected_import_module_name.to_string(),
-        hash_export_name.to_string(),
-        init_export_name.to_string(),
-        update_export_name.to_string(),
-        final_export_name.to_string(),
-    ];
-    // Instantiate once on the calling thread to report any errors.
-    HashEngine::instantiate(&bytes, &names)?;
-    Ok(HashFunction {
-        engine: PerThread::new(move || {
-            HashEngine::instantiate(&bytes, &names)
-                .expect("the module instantiated successfully on another thread")
-        }),
-    })
+/// The raw state is this port's own encoding (libauth's is the in-memory
+/// layout of the hasher in its WebAssembly modules): the chaining value in
+/// digest byte order, the number of bytes hashed (8 bytes, little-endian), and
+/// the pending partial block (zero-filled).
+pub(crate) trait MerkleDamgard {
+    /// The block length in bytes.
+    const BLOCK_LENGTH: usize;
+    /// The length in bytes of the message length field of the final padding.
+    const LENGTH_FIELD_LENGTH: usize;
+    /// Whether the message length field is big-endian (little-endian if not).
+    const BIG_ENDIAN_LENGTH: bool;
+    /// The initial chaining value, in digest byte order.
+    fn initial_chaining_value() -> Vec<u8>;
+    /// Compress `blocks` (a multiple of `BLOCK_LENGTH` bytes) into
+    /// `chaining_value`.
+    fn compress(chaining_value: &mut [u8], blocks: &[u8]);
 }
 
-fn export_index(instance: &Instance, name: &str) -> Result<u32, String> {
-    instance
-        .function_index(name)
-        .ok_or_else(|| format!("Missing export: {name}"))
+fn state_length<H: MerkleDamgard>() -> usize {
+    H::initial_chaining_value().len() + 8 + H::BLOCK_LENGTH
 }
 
-impl HashEngine {
-    fn instantiate(webassembly_bytes: &[u8], names: &[String; 5]) -> Result<Self, String> {
-        let [expected_import_module_name, hash_export_name, init_export_name, update_export_name, final_export_name] =
-            names;
-        let module = parse_module(webassembly_bytes)?;
-        for (index, import) in module.imports.iter().enumerate() {
-            if &import.module != expected_import_module_name {
-                return Err(format!(
-                    "Import #{index} module=\"{}\" error: module is not an object or function",
-                    import.module
-                ));
-            }
+/// Begin an incremental hash computation.
+pub(crate) fn init<H: MerkleDamgard>() -> Vec<u8> {
+    let mut state = H::initial_chaining_value();
+    state.resize(state_length::<H>(), 0);
+    state
+}
+
+/// Copy a raw state. Like libauth's modules, which read a fixed-length prefix
+/// of the raw state, a shorter raw state throws (here, panics).
+fn load_state<H: MerkleDamgard>(raw_state: &[u8]) -> Vec<u8> {
+    let length = state_length::<H>();
+    if raw_state.len() < length {
+        panic!("RuntimeError: unreachable");
+    }
+    raw_state[..length].to_vec()
+}
+
+/// Add input to an incremental hash computation.
+pub(crate) fn update<H: MerkleDamgard>(raw_state: &[u8], input: &[u8]) -> Vec<u8> {
+    let mut state = load_state::<H>(raw_state);
+    let chaining_value_length = state.len() - 8 - H::BLOCK_LENGTH;
+    let (chaining_value, rest) = state.split_at_mut(chaining_value_length);
+    let (count_bytes, buffer) = rest.split_at_mut(8);
+    let count = u64::from_le_bytes(count_bytes.try_into().expect("8 bytes"));
+    let mut buffered = (count % H::BLOCK_LENGTH as u64) as usize;
+    let mut remaining = input;
+    if buffered > 0 {
+        let taken = remaining.len().min(H::BLOCK_LENGTH - buffered);
+        buffer[buffered..buffered + taken].copy_from_slice(&remaining[..taken]);
+        buffered += taken;
+        remaining = &remaining[taken..];
+        if buffered == H::BLOCK_LENGTH {
+            H::compress(chaining_value, buffer);
+            buffered = 0;
         }
-        let instance = Instance::new(
-            module,
-            HASH_MODULE_MEMORY_BYTES,
-            Vec::new(),
-            Box::new(WbindgenHost),
-        );
-        Ok(HashEngine {
-            hash_export: export_index(&instance, hash_export_name)?,
-            init_export: export_index(&instance, init_export_name)?,
-            update_export: export_index(&instance, update_export_name)?,
-            final_export: export_index(&instance, final_export_name)?,
-            global_argument_ptr: export_index(&instance, "__wbindgen_global_argument_ptr")?,
-            instance,
-        })
     }
+    if buffered == 0 {
+        let full_blocks = remaining.len() - remaining.len() % H::BLOCK_LENGTH;
+        H::compress(chaining_value, &remaining[..full_blocks]);
+        let tail = &remaining[full_blocks..];
+        buffer.fill(0);
+        buffer[..tail.len()].copy_from_slice(tail);
+    }
+    count_bytes.copy_from_slice(&count.wrapping_add(input.len() as u64).to_le_bytes());
+    state
+}
 
-    fn call(&mut self, index: u32, args: &[u64]) -> Vec<u64> {
-        self.instance
-            .call_function(index, args)
-            .expect("hash module call succeeds")
+/// Finish an incremental hash computation, returning the hash.
+pub(crate) fn r#final<H: MerkleDamgard>(raw_state: &[u8]) -> Vec<u8> {
+    let state = load_state::<H>(raw_state);
+    let chaining_value_length = state.len() - 8 - H::BLOCK_LENGTH;
+    let mut chaining_value = state[..chaining_value_length].to_vec();
+    let count = u64::from_le_bytes(state[chaining_value_length..chaining_value_length + 8].try_into().expect("8 bytes"));
+    let buffered = (count % H::BLOCK_LENGTH as u64) as usize;
+    let mut padding = state[chaining_value_length + 8..chaining_value_length + 8 + buffered].to_vec();
+    padding.push(0x80);
+    while padding.len() % H::BLOCK_LENGTH != H::BLOCK_LENGTH - H::LENGTH_FIELD_LENGTH {
+        padding.push(0);
     }
-
-    fn global_argument_ptr(&mut self) -> u32 {
-        let index = self.global_argument_ptr;
-        self.call(index, &[])[0] as u32
+    let bit_length = u128::from(count) * 8;
+    let length_field = if H::BIG_ENDIAN_LENGTH { bit_length.to_be_bytes() } else { bit_length.to_le_bytes() };
+    if H::BIG_ENDIAN_LENGTH {
+        padding.extend_from_slice(&length_field[16 - H::LENGTH_FIELD_LENGTH..]);
+    } else {
+        padding.extend_from_slice(&length_field[..H::LENGTH_FIELD_LENGTH]);
     }
-
-    fn malloc(&mut self, length: usize) -> u32 {
-        self.instance
-            .call_export("__wbindgen_malloc", &[length as u64])
-            .expect("hash module allocation succeeds")[0] as u32
-    }
-
-    fn free(&mut self, pointer: u32, length: usize) {
-        let _ = self
-            .instance
-            .call_export("__wbindgen_free", &[u64::from(pointer), length as u64]);
-    }
-
-    fn pass_array(&mut self, array: &[u8]) -> (u32, usize) {
-        let pointer = self.malloc(array.len());
-        self.instance
-            .memory_slice_mut(pointer, array.len() as u32)
-            .expect("hash module allocation is in bounds")
-            .copy_from_slice(array);
-        (pointer, array.len())
-    }
-
-    fn read_return(&mut self, ret_ptr: u32) -> Vec<u8> {
-        let header = self
-            .instance
-            .memory_slice(ret_ptr, 8)
-            .expect("return pointer is in bounds")
-            .to_vec();
-        let pointer = u32::from_le_bytes([header[0], header[1], header[2], header[3]]);
-        let length = u32::from_le_bytes([header[4], header[5], header[6], header[7]]);
-        let value = self
-            .instance
-            .memory_slice(pointer, length)
-            .expect("returned value is in bounds")
-            .to_vec();
-        self.free(pointer, length as usize);
-        value
-    }
-
-    fn hash(&mut self, input: &[u8]) -> Vec<u8> {
-        let (input_ptr, input_len) = self.pass_array(input);
-        let ret_ptr = self.global_argument_ptr();
-        let export = self.hash_export;
-        self.call(
-            export,
-            &[u64::from(ret_ptr), u64::from(input_ptr), input_len as u64],
-        );
-        let value = self.read_return(ret_ptr);
-        self.free(input_ptr, input_len);
-        value
-    }
-
-    fn init(&mut self) -> Vec<u8> {
-        let ret_ptr = self.global_argument_ptr();
-        let export = self.init_export;
-        self.call(export, &[u64::from(ret_ptr)]);
-        self.read_return(ret_ptr)
-    }
-
-    fn update(&mut self, raw_state: &mut [u8], input: &[u8]) -> Vec<u8> {
-        let (state_ptr, state_len) = self.pass_array(raw_state);
-        let (input_ptr, input_len) = self.pass_array(input);
-        let ret_ptr = self.global_argument_ptr();
-        let export = self.update_export;
-        self.call(
-            export,
-            &[
-                u64::from(ret_ptr),
-                u64::from(state_ptr),
-                state_len as u64,
-                u64::from(input_ptr),
-                input_len as u64,
-            ],
-        );
-        let value = self.read_return(ret_ptr);
-        // libauth copies the module's (possibly advanced) raw state back.
-        let updated = self
-            .instance
-            .memory_slice(state_ptr, state_len as u32)
-            .expect("raw state is in bounds")
-            .to_vec();
-        raw_state.copy_from_slice(&updated);
-        self.free(state_ptr, state_len);
-        self.free(input_ptr, input_len);
-        value
-    }
-
-    fn finalize(&mut self, raw_state: &mut [u8]) -> Vec<u8> {
-        let (state_ptr, state_len) = self.pass_array(raw_state);
-        let ret_ptr = self.global_argument_ptr();
-        let export = self.final_export;
-        self.call(
-            export,
-            &[u64::from(ret_ptr), u64::from(state_ptr), state_len as u64],
-        );
-        let value = self.read_return(ret_ptr);
-        let updated = self
-            .instance
-            .memory_slice(state_ptr, state_len as u32)
-            .expect("raw state is in bounds")
-            .to_vec();
-        raw_state.copy_from_slice(&updated);
-        self.free(state_ptr, state_len);
-        value
-    }
+    H::compress(&mut chaining_value, &padding);
+    chaining_value
 }

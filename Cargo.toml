@@ -3,7 +3,7 @@ name = "libauth"
 version = "3.1.0-next.8"
 edition = "2021"
 rust-version = "1.90"
-description = "A zero-dependency Rust port of libauth v3.1.0-next.8"
+description = "A Rust port of libauth v3.1.0-next.8"
 license = "MIT"
 publish = false
 autobins = false
@@ -15,6 +15,12 @@ autobenches = false
 path = "src/index.rs"
 
 [dependencies]
+hmac = "0.12"
+k256 = { version = "0.13", default-features = false, features = ["arithmetic", "expose-field", "precomputed-tables", "std"] }
+ripemd = "0.1"
+sha1 = { version = "0.10", features = ["compress"] }
+sha2 = { version = "0.10", features = ["compress"] }
+
 [dev-dependencies]
 [build-dependencies]
 
@@ -183,10 +189,6 @@ path = "src/lib/address/cash-address.spec.rs"
 [[test]]
 name = "locking-bytecode"
 path = "src/lib/address/locking-bytecode.spec.rs"
-
-[[test]]
-name = "secp256k1-wasm"
-path = "src/lib/bin/secp256k1/secp256k1-wasm.spec.rs"
 
 [[test]]
 name = "combinations"

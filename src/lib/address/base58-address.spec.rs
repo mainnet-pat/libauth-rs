@@ -54,7 +54,7 @@ fn encode_base58_address_format_() {
         "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i"
     );
     assert_eq!(
-        encode_base58_address_format(Base58AddressFormatVersion::P2pkh.to_u8(), &payload, Some(&*sha256)),
+        encode_base58_address_format(Base58AddressFormatVersion::P2pkh.to_u8(), &payload, Some(&sha256)),
         // cspell: disable-next-line
         "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i"
     );
@@ -65,12 +65,12 @@ fn encode_base58_address_() {
     let payload = hex_to_bin("76a04053bda0a88bda5177b86a15c3b29f559873");
     // `'p2pkh'`, `'p2pkhTestnet'`, ... are `Base58AddressFormatVersion` variants in Rust.
     assert_eq!(
-        encode_base58_address(Base58AddressFormatVersion::P2pkh, &payload, Some(&*sha256)),
+        encode_base58_address(Base58AddressFormatVersion::P2pkh, &payload, Some(&sha256)),
         // cspell: disable-next-line
         "1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu"
     );
     assert_eq!(
-        encode_base58_address(Base58AddressFormatVersion::P2pkhTestnet, &payload, Some(&*sha256)),
+        encode_base58_address(Base58AddressFormatVersion::P2pkhTestnet, &payload, Some(&sha256)),
         // cspell: disable-next-line
         "mrLC19Je2BuWQDkWSTriGYPyQJXKkkBmCx"
     );
@@ -80,7 +80,7 @@ fn encode_base58_address_() {
         "CTH8H8Zj6DSnXFBKQeDG28ogAS92iS16Bp"
     );
     assert_eq!(
-        encode_base58_address(Base58AddressFormatVersion::P2sh20, &payload, Some(&*sha256)),
+        encode_base58_address(Base58AddressFormatVersion::P2sh20, &payload, Some(&sha256)),
         // cspell: disable-next-line
         "3CWFddi6m4ndiGyKqzYvsFYagqDLPVMTzC"
     );
@@ -90,7 +90,7 @@ fn encode_base58_address_() {
         "2N44ThNe8NXHyv4bsX8AoVCXquBRW94Ls7W"
     );
     assert_eq!(
-        encode_base58_address(Base58AddressFormatVersion::P2sh20CopayBch, &payload, Some(&*sha256)),
+        encode_base58_address(Base58AddressFormatVersion::P2sh20CopayBch, &payload, Some(&sha256)),
         // cspell: disable-next-line
         "HHLN6S9BcP1JLSrMhgD5qe57iVEMFMLCBT"
     );
@@ -109,7 +109,7 @@ fn decode_base58_address_format_() {
     );
     assert_eq!(
         // cspell: disable-next-line
-        decode_base58_address_format("1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i", Some(&*sha256)),
+        decode_base58_address_format("1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i", Some(&sha256)),
         Ok(DecodedBase58AddressFormat {
             payload,
             version: Base58AddressFormatVersion::P2pkh.to_u8(),
@@ -130,7 +130,7 @@ fn decode_base58_address_() {
     );
     assert_eq!(
         // cspell: disable-next-line
-        decode_base58_address("1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i", Some(&*sha256)),
+        decode_base58_address("1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i", Some(&sha256)),
         Ok(DecodedBase58Address {
             payload,
             version: Base58AddressFormatVersion::P2pkh,
@@ -269,7 +269,7 @@ fn base58_address_valid_vectors_from_c_implementation_includes_wif_vectors() {
                     } else {
                         Base58AddressNetwork::Mainnet
                     }),
-                    Some(&*sha256)
+                    Some(&sha256)
                 ),
                 Base58AddressEncodingResult::Address(base58_address.to_string())
             );

@@ -4,7 +4,7 @@
 mod hash_spec_helper;
 
 use hash_spec_helper::TestHashFunction;
-use libauth::{get_embedded_sha1_binary, instantiate_sha1, instantiate_sha1_bytes};
+use libauth::instantiate_sha1;
 
 #[rustfmt::skip]
 const ABC_HASH: [u8; 20] = [169, 153, 62, 54, 71, 6, 129, 106, 186, 62, 37, 113, 120, 80, 194, 108, 156, 208, 216, 157];
@@ -230,21 +230,14 @@ const HASH_JS_DIGESTS: [&str; 100] = [
 /// `testHashFunction<Sha1>({ ... })`
 const PARAMETERS: TestHashFunction = TestHashFunction {
     abc_hash: &ABC_HASH,
-    get_embedded_binary: get_embedded_sha1_binary,
     hash_function_name: "sha1",
     instantiate: instantiate_sha1,
-    instantiate_bytes: instantiate_sha1_bytes,
     libauth_hash: &LIBAUTH_HASH,
     node_js_algorithm: "sha1",
     node_js_digests: &NODE_JS_DIGESTS,
     hash_js_digests: &HASH_JS_DIGESTS,
     test_hash: &TEST_HASH,
 };
-
-#[test]
-fn crypto_sha1_get_embedded_binary_returns_the_proper_binary() {
-    hash_spec_helper::get_embedded_binary_returns_the_proper_binary(&PARAMETERS);
-}
 
 #[test]
 fn crypto_sha1_instantiated_with_embedded_binary() {

@@ -10,7 +10,7 @@ use super::sha256::Sha256;
 ///
 /// @param payload - the payload to hash
 /// @param crypto - the `ripemd160` and `sha256` implementations to use
-/// (defaults to the internal WASM implementations)
+/// (defaults to the internal implementations)
 pub fn hash160(payload: &[u8], crypto: Option<(&Ripemd160, &Sha256)>) -> Vec<u8> {
     let (ripemd160, sha256) = crypto.unwrap_or((&internal_ripemd160, &internal_sha256));
     ripemd160.hash(&sha256.hash(payload))
@@ -23,7 +23,7 @@ pub fn hash160(payload: &[u8], crypto: Option<(&Ripemd160, &Sha256)>) -> Vec<u8>
 /// {@link AddressType.p2sh32} addresses, and checksums in WIF and BIP32 keys.
 ///
 /// @param payload - the payload to hash
-/// @param sha256 - an implementation of sha256 (defaults to the internal WASM
+/// @param sha256 - an implementation of sha256 (defaults to the internal
 /// implementation)
 pub fn hash256(payload: &[u8], sha256: Option<&Sha256>) -> Vec<u8> {
     let sha256 = sha256.unwrap_or(&internal_sha256);

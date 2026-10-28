@@ -4,7 +4,7 @@
 mod hash_spec_helper;
 
 use hash_spec_helper::TestHashFunction;
-use libauth::{get_embedded_ripemd160_binary, instantiate_ripemd160, instantiate_ripemd160_bytes};
+use libauth::instantiate_ripemd160;
 
 #[rustfmt::skip]
 const ABC_HASH: [u8; 20] = [142, 178, 8, 247, 224, 93, 152, 122, 155, 4, 74, 142, 152, 198, 176, 135, 241, 90, 11, 252];
@@ -230,21 +230,14 @@ const HASH_JS_DIGESTS: [&str; 100] = [
 /// `testHashFunction<Ripemd160>({ ... })`
 const PARAMETERS: TestHashFunction = TestHashFunction {
     abc_hash: &ABC_HASH,
-    get_embedded_binary: get_embedded_ripemd160_binary,
     hash_function_name: "ripemd160",
     instantiate: instantiate_ripemd160,
-    instantiate_bytes: instantiate_ripemd160_bytes,
     libauth_hash: &LIBAUTH_HASH,
     node_js_algorithm: "ripemd160",
     node_js_digests: &NODE_JS_DIGESTS,
     hash_js_digests: &HASH_JS_DIGESTS,
     test_hash: &TEST_HASH,
 };
-
-#[test]
-fn crypto_ripemd160_get_embedded_binary_returns_the_proper_binary() {
-    hash_spec_helper::get_embedded_binary_returns_the_proper_binary(&PARAMETERS);
-}
 
 #[test]
 fn crypto_ripemd160_instantiated_with_embedded_binary() {

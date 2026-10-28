@@ -11,6 +11,6 @@ use libauth::instantiate_sha256;
 
 fn main() {
     // benchmarkHashingFunction<Sha256>('sha256', instantiateSha256(), 'sha256');
-    let hash_function = instantiate_sha256().expect("the embedded binary instantiates");
+    let hash_function = instantiate_sha256();
     benchmark_hashing_function("sha256", &hash_function, "sha256");
 }

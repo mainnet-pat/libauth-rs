@@ -28,11 +28,11 @@ fn wif_vectors(r#type: WalletImportFormatType, wif: &str, key: &str) {
         })
     );
     assert_eq!(
-        encode_private_key_wif(&hex_to_bin(key), r#type, Some(&*internal_sha256)),
+        encode_private_key_wif(&hex_to_bin(key), r#type, Some(&internal_sha256)),
         wif
     );
     assert_eq!(
-        decode_private_key_wif(wif, Some(&*internal_sha256)),
+        decode_private_key_wif(wif, Some(&internal_sha256)),
         Ok(DecodedPrivateKeyWif {
             private_key: hex_to_bin(key),
             key_type: r#type,

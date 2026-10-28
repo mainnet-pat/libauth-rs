@@ -365,7 +365,7 @@ fn locking_bytecode_to_base58_address_p2pk() {
     );
 
     assert_eq!(
-        locking_bytecode_to_base58_address(&genesis_coinbase, Some(Base58AddressNetwork::Mainnet), Some(&*sha256)),
+        locking_bytecode_to_base58_address(&genesis_coinbase, Some(Base58AddressNetwork::Mainnet), Some(&sha256)),
         Base58AddressEncodingResult::Contents(known(genesis_public_key, LockingBytecodeType::P2pk))
     );
 
@@ -377,7 +377,7 @@ fn locking_bytecode_to_base58_address_p2pk() {
         locking_bytecode_to_base58_address(
             &genesis_coinbase_compressed,
             Some(Base58AddressNetwork::Testnet),
-            Some(&*sha256)
+            Some(&sha256)
         ),
         Base58AddressEncodingResult::Contents(known(compressed_public_key, LockingBytecodeType::P2pk))
     );
@@ -401,7 +401,7 @@ fn base58_address_to_locking_bytecode_locking_bytecode_to_base58_address_p2pkh()
         base58(address)
     );
     assert_eq!(
-        locking_bytecode_to_base58_address(&p2pkh, Some(Base58AddressNetwork::Testnet), Some(&*sha256)),
+        locking_bytecode_to_base58_address(&p2pkh, Some(Base58AddressNetwork::Testnet), Some(&sha256)),
         base58(address_testnet)
     );
     assert_eq!(
@@ -424,7 +424,7 @@ fn base58_address_to_locking_bytecode_locking_bytecode_to_base58_address_p2pkh()
         })
     );
     assert_eq!(
-        base58_address_to_locking_bytecode(address_copay, Some(&*sha256)),
+        base58_address_to_locking_bytecode(address_copay, Some(&sha256)),
         Ok(DecodedBase58AddressLockingBytecode {
             bytecode: p2pkh,
             version: Base58AddressFormatVersion::P2pkhCopayBch,
@@ -446,7 +446,7 @@ fn base58_address_to_locking_bytecode_locking_bytecode_to_base58_address_p2sh20(
         base58(address)
     );
     assert_eq!(
-        locking_bytecode_to_base58_address(&p2sh20, Some(Base58AddressNetwork::Testnet), Some(&*sha256)),
+        locking_bytecode_to_base58_address(&p2sh20, Some(Base58AddressNetwork::Testnet), Some(&sha256)),
         base58(address_testnet)
     );
     assert_eq!(
@@ -469,7 +469,7 @@ fn base58_address_to_locking_bytecode_locking_bytecode_to_base58_address_p2sh20(
         })
     );
     assert_eq!(
-        base58_address_to_locking_bytecode(address_copay, Some(&*sha256)),
+        base58_address_to_locking_bytecode(address_copay, Some(&sha256)),
         Ok(DecodedBase58AddressLockingBytecode {
             bytecode: p2sh20,
             version: Base58AddressFormatVersion::P2sh20CopayBch,

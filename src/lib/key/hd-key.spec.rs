@@ -161,7 +161,7 @@ fn crypto_derive_hd_private_node_from_seed() {
         parent_identifier: None,
     });
     let either = derive_hd_private_node_from_seed(&SEED, None, None, None);
-    let custom_crypto = derive_hd_private_node_from_seed(&SEED, None, Some(&*sha512), None);
+    let custom_crypto = derive_hd_private_node_from_seed(&SEED, None, Some(&sha512), None);
     let valid_node = derive_hd_private_node_from_seed(&SEED, Some(true), None, None);
     let invalid_node = derive_hd_private_node_from_seed(&SEED, Some(false), None, None);
     assert_eq!(either, valid);
@@ -185,7 +185,7 @@ fn crypto_derive_hd_private_node_identifier() {
         Ok(hex_to_bin("15c918d389673c6cd0660050f268a843361e1111"))
     );
     assert_eq!(
-        derive_hd_private_node_identifier(&node, Some((&*ripemd160, &*secp256k1, &*sha256))),
+        derive_hd_private_node_identifier(&node, Some((&ripemd160, &secp256k1, &sha256))),
         Ok(hex_to_bin("15c918d389673c6cd0660050f268a843361e1111"))
     );
     assert_eq!(
@@ -208,7 +208,7 @@ fn crypto_derive_hd_public_node_identifier() {
         hex_to_bin("15c918d389673c6cd0660050f268a843361e1111")
     );
     assert_eq!(
-        derive_hd_public_node_identifier(&node, Some((&*ripemd160, &*sha256))),
+        derive_hd_public_node_identifier(&node, Some((&ripemd160, &sha256))),
         hex_to_bin("15c918d389673c6cd0660050f268a843361e1111")
     );
 }
@@ -220,7 +220,7 @@ fn crypto_hd_private_key_to_identifier() {
         Ok(hex_to_bin("15c918d389673c6cd0660050f268a843361e1111"))
     );
     assert_eq!(
-        hd_private_key_to_identifier(XPRV, Some((&*secp256k1, &*sha256))),
+        hd_private_key_to_identifier(XPRV, Some((&secp256k1, &sha256))),
         Ok(hex_to_bin("15c918d389673c6cd0660050f268a843361e1111"))
     );
     assert_eq!(
@@ -236,11 +236,11 @@ fn crypto_hd_public_key_to_identifier() {
         Ok(hex_to_bin("15c918d389673c6cd0660050f268a843361e1111"))
     );
     assert_eq!(
-        hd_public_key_to_identifier(XPUB, Some((&*secp256k1, &*sha256))),
+        hd_public_key_to_identifier(XPUB, Some((&secp256k1, &sha256))),
         Ok(hex_to_bin("15c918d389673c6cd0660050f268a843361e1111"))
     );
     assert_eq!(
-        hd_public_key_to_identifier(&XPUB[1..], Some((&*secp256k1, &*sha256))),
+        hd_public_key_to_identifier(&XPUB[1..], Some((&secp256k1, &sha256))),
         Err(format!("{} Length: 81.", HdKeyDecodingError::incorrectLength))
     );
 }
@@ -278,7 +278,7 @@ fn crypto_decode_hd_key() {
         })
     );
     assert_eq!(
-        decode_hd_key(XPUB, Some((&*secp256k1, &*sha256))),
+        decode_hd_key(XPUB, Some((&secp256k1, &sha256))),
         Ok(DecodedHdKey {
             network: HdKeyNetwork::Mainnet,
             node: HdNodeValid::Public(HdPublicNodeValid {
@@ -310,7 +310,7 @@ fn crypto_decode_hd_key_errors() {
     assert_eq!(
         decode_hd_key(
             "xpub661MyMwAqRbcEngHLkoUWCKMBMGeqdqCGkqtzrHaTZub9ALw2oRfHA6fQP5n5X9VHStaNTBYomkSb8BFhUGavwD3RG1qvMkEKceTavTp2Ta",
-            Some((&*secp256k1, &*sha256))
+            Some((&secp256k1, &sha256))
         ),
         Err(format!(
             "{} Encoded: c695e081; computed: c695e08c.",
@@ -333,7 +333,7 @@ fn crypto_decode_hd_private_key() {
         }))
     );
     assert_eq!(
-        decode_hd_private_key(TPRV, Some((&*secp256k1, &*sha256))),
+        decode_hd_private_key(TPRV, Some((&secp256k1, &sha256))),
         Ok(testnet(HdPrivateNodeValid {
             chain_code: hex_to_bin("18aab7e9ef169f3029d93651d0c85303cbcc2ac559ccd04c324a2e678ef26dc9"),
             child_index: 0,
@@ -394,7 +394,7 @@ fn crypto_decode_hd_public_key() {
         }))
     );
     assert_eq!(
-        decode_hd_public_key(TPUB, Some((&*secp256k1, &*sha256))),
+        decode_hd_public_key(TPUB, Some((&secp256k1, &sha256))),
         Ok(testnet(HdPublicNodeValid {
             chain_code: hex_to_bin("18aab7e9ef169f3029d93651d0c85303cbcc2ac559ccd04c324a2e678ef26dc9"),
             child_index: 0,
@@ -439,7 +439,7 @@ fn crypto_encode_hd_private_key() {
     );
 
     assert_eq!(
-        encode_hd_private_key(&testnet(node.clone()), Some(&*sha256)),
+        encode_hd_private_key(&testnet(node.clone()), Some(&sha256)),
         Ok(HdPrivateKeyEncodeResult {
             hd_private_key: TPRV.to_string()
         })
@@ -742,7 +742,7 @@ fn crypto_encode_hd_public_key() {
         })
     );
     assert_eq!(
-        encode_hd_public_key(&testnet(node.clone()), Some((&*secp256k1, &*sha256))),
+        encode_hd_public_key(&testnet(node.clone()), Some((&secp256k1, &sha256))),
         Ok(HdPublicKeyEncodeResult {
             hd_public_key: TPUB.to_string()
         })
@@ -1494,7 +1494,7 @@ fn crypto_crack_hd_private_node_from_hd_public_node_and_child_private_node() {
         crack_hd_private_node_from_hd_public_node_and_child_private_node(
             &hardened_child_public_node,
             &non_hardened_grandchild_node,
-            Some(&*sha512)
+            Some(&sha512)
         ),
         Ok(hardened_child_node.clone())
     );

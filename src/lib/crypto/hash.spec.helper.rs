@@ -5,6 +5,11 @@
 //! `#[test]` functions (with libauth's titles) and calls the corresponding
 //! function of this helper with its [`TestHashFunction`] parameters.
 //!
+//! libauth's hash functions are instantiated from embedded WebAssembly; this
+//! port's are native, so `getEmbeddedBinary` and `instantiateBytes` do not
+//! exist: the `getEmbeddedBinary returns the proper binary` test is not
+//! ported, and `instantiated with bytes` tests the instantiated hash function.
+//!
 //! Substitution: the `[fast-check] ... instantiated with bytes` test compares
 //! each hash function with Node.js's `createHash` and with `hash.js`
 //! (JavaScript-only references). Here, each of those comparisons uses 100
@@ -17,8 +22,6 @@
 
 #[path = "../../../tests/fast-check.rs"]
 mod fc;
-
-use std::path::Path;
 
 use libauth::{hex_to_bin, utf8_to_bin, HashFunction};
 
@@ -63,10 +66,8 @@ impl FixedInputs {
 /// The parameters of libauth's `testHashFunction`.
 pub struct TestHashFunction {
     pub abc_hash: &'static [u8],
-    pub get_embedded_binary: fn() -> Vec<u8>,
     pub hash_function_name: &'static str,
-    pub instantiate: fn() -> Result<HashFunction, String>,
-    pub instantiate_bytes: fn(&[u8]) -> Result<HashFunction, String>,
+    pub instantiate: fn() -> HashFunction,
     pub libauth_hash: &'static [u8],
     /// `nodeJsAlgorithm` (`'ripemd160' | 'sha1' | 'sha256' | 'sha512'`).
     pub node_js_algorithm: &'static str,
@@ -79,21 +80,9 @@ pub struct TestHashFunction {
     pub test_hash: &'static [u8],
 }
 
-/// `[crypto] ${hashFunctionName} getEmbeddedBinary returns the proper binary`
-pub fn get_embedded_binary_returns_the_proper_binary(parameters: &TestHashFunction) {
-    let binary = (parameters.get_embedded_binary)();
-    let path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib/crypto"))
-        .join("..")
-        .join("bin")
-        .join(parameters.hash_function_name)
-        .join(format!("{}.wasm", parameters.hash_function_name));
-    let binary_from_disk = std::fs::read(path).expect("the binary exists");
-    assert_eq!(binary, binary_from_disk);
-}
-
 /// `[crypto] ${hashFunctionName} instantiated with embedded binary`
 pub fn instantiated_with_embedded_binary(parameters: &TestHashFunction) {
-    let hash_function = (parameters.instantiate)().expect("the embedded binary instantiates");
+    let hash_function = (parameters.instantiate)();
     assert_eq!(hash_function.hash(&utf8_to_bin("abc")), parameters.abc_hash);
     assert_eq!(hash_function.hash(&utf8_to_bin("test")), parameters.test_hash);
     assert_eq!(hash_function.hash(&utf8_to_bin("libauth")), parameters.libauth_hash);
@@ -101,8 +90,7 @@ pub fn instantiated_with_embedded_binary(parameters: &TestHashFunction) {
 
 /// `[fast-check] [crypto] ${hashFunctionName} instantiated with bytes`
 pub fn instantiated_with_bytes(parameters: &TestHashFunction) {
-    let binary = (parameters.get_embedded_binary)();
-    let hash_function = (parameters.instantiate_bytes)(&binary).expect("the binary instantiates");
+    let hash_function = (parameters.instantiate)();
 
     // equivalentToNative: `createHash(nodeJsAlgorithm)` (precomputed)
     let mut messages = FixedInputs::new(NODE_JS_SEED);
@@ -133,11 +121,11 @@ pub fn instantiated_with_bytes(parameters: &TestHashFunction) {
 
 /// `[crypto] ${hashFunctionName} incremental hashing`
 pub fn incremental_hashing(parameters: &TestHashFunction) {
-    let hash_function = (parameters.instantiate)().expect("the embedded binary instantiates");
+    let hash_function = (parameters.instantiate)();
     assert_eq!(
-        hash_function.r#final(&mut hash_function.update(
-            &mut hash_function.update(
-                &mut hash_function.update(&mut hash_function.init(), &utf8_to_bin("a")),
+        hash_function.r#final(&hash_function.update(
+            &hash_function.update(
+                &hash_function.update(&hash_function.init(), &utf8_to_bin("a")),
                 &utf8_to_bin("b"),
             ),
             &utf8_to_bin("c"),
@@ -145,12 +133,12 @@ pub fn incremental_hashing(parameters: &TestHashFunction) {
         parameters.abc_hash
     );
     assert_eq!(
-        hash_function.r#final(&mut hash_function.update(&mut hash_function.init(), &utf8_to_bin("test"))),
+        hash_function.r#final(&hash_function.update(&hash_function.init(), &utf8_to_bin("test"))),
         parameters.test_hash
     );
     assert_eq!(
-        hash_function.r#final(&mut hash_function.update(
-            &mut hash_function.update(&mut hash_function.init(), &utf8_to_bin("lib")),
+        hash_function.r#final(&hash_function.update(
+            &hash_function.update(&hash_function.init(), &utf8_to_bin("lib")),
             &utf8_to_bin("auth"),
         )),
         parameters.libauth_hash
@@ -168,7 +156,7 @@ pub fn incremental_hashing(parameters: &TestHashFunction) {
             .map(|index| index * chunk_size)
             .map(|start_index| &message[start_index..(start_index + chunk_size).min(message.len())]);
         let incremental_result = hash_function.r#final(
-            &mut chunks.fold(hash_function.init(), |mut state, chunk| hash_function.update(&mut state, chunk)),
+            &chunks.fold(hash_function.init(), |state, chunk| hash_function.update(&state, chunk)),
         );
         let single_pass_result = hash_function.hash(message);
         assert_eq!(incremental_result, single_pass_result);

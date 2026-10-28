@@ -47,7 +47,7 @@ const SHA256_BLOCK_BYTE_LENGTH: usize = 64;
 ///
 /// @param secret - the secret key (recommended length: 32-64 bytes)
 /// @param message - the message to authenticate
-/// @param sha256 - an implementation of Sha256 (defaults to the internal WASM
+/// @param sha256 - an implementation of Sha256 (defaults to the internal
 /// implementation)
 pub fn hmac_sha256(secret: &[u8], message: &[u8], sha256: Option<&Sha256>) -> Vec<u8> {
     let sha256 = sha256.unwrap_or(&internal_sha256);
@@ -65,7 +65,7 @@ const SHA512_BLOCK_BYTE_LENGTH: usize = 128;
 ///
 /// @param secret - the secret key (recommended length: 64-128 bytes)
 /// @param message - the message to authenticate
-/// @param sha512 - an implementation of Sha512 (defaults to the internal WASM
+/// @param sha512 - an implementation of Sha512 (defaults to the internal
 /// implementation)
 pub fn hmac_sha512(secret: &[u8], message: &[u8], sha512: Option<&Sha512>) -> Vec<u8> {
     let sha512 = sha512.unwrap_or(&internal_sha512);

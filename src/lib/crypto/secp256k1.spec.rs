@@ -22,9 +22,8 @@ use std::sync::LazyLock;
 
 use libauth::runtime::crypto::get_random_values;
 use libauth::{
-    assert_success, get_embedded_secp256k1_binary, hex_to_bin, instantiate_secp256k1,
-    instantiate_secp256k1_bytes, secp256k1 as internal_secp256k1, RecoverableSignature, Secp256k1,
-    Secp256k1Error,
+    assert_success, hex_to_bin, instantiate_secp256k1, secp256k1 as internal_secp256k1,
+    RecoverableSignature, Secp256k1, Secp256k1Error,
 };
 
 // test vectors (from `zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong`, m/0 and m/1):
@@ -91,12 +90,7 @@ const SIG_RECOVERY: u8 = 1;
 // libauth setup
 /// `const secp256k1Promise = instantiateSecp256k1();`
 static SECP256K1_PROMISE: LazyLock<Secp256k1> =
-    LazyLock::new(|| instantiate_secp256k1(None).expect("the embedded binary instantiates"));
-
-/// `const binary = getEmbeddedSecp256k1Binary();`
-fn binary() -> Vec<u8> {
-    get_embedded_secp256k1_binary()
-}
+    LazyLock::new(|| instantiate_secp256k1(None));
 
 /// `randomBytes(32)`
 fn random_bytes_32() -> Vec<u8> {
@@ -685,15 +679,12 @@ const REFERENCE_VECTORS: [ReferenceVector; 16] = [
     },
 ];
 
-#[test]
-fn crypto_instantiate_secp256k1_with_binary() {
-    let secp256k1 = instantiate_secp256k1_bytes(&binary(), None).expect("the binary instantiates");
-    assert!(secp256k1.verify_signature_der_low_s(&SIG_DER, &PUBKEY_COMPRESSED, &MESSAGE_HASH));
-}
+// `[crypto] instantiateSecp256k1 with binary` is not ported: this port's
+// secp256k1 is native, so `instantiateSecp256k1Bytes` does not exist.
 
 #[test]
 fn crypto_instantiate_secp256k1_with_randomization() {
-    let secp256k1 = instantiate_secp256k1(Some(&random_bytes_32())).expect("the binary instantiates");
+    let secp256k1 = instantiate_secp256k1(Some(&random_bytes_32()));
     assert!(secp256k1.verify_signature_der_low_s(&SIG_DER, &PUBKEY_UNCOMPRESSED, &MESSAGE_HASH));
 }
 

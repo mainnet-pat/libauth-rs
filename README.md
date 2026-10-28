@@ -1,6 +1,6 @@
 # libauth (Rust port)
 
-A zero-dependency Rust port of [`@bitauth/libauth`](https://github.com/bitauth/libauth)
+A Rust port of [`@bitauth/libauth`](https://github.com/bitauth/libauth)
 v3.1.0-next.8 (commit `d28da7f5`).
 
 ## Layout
@@ -21,8 +21,8 @@ The crate mirrors libauth's `src/` tree file for file:
   `X.spec.helper.ts` an `X.spec.helper.rs` (runnable helpers are Cargo
   examples), and every `X.bench.ts` a Cargo bench `X.bench.rs`
   (`harness = false`).
-- Non-code files are copied verbatim: readmes, fixtures, the `.wasm` binaries,
-  JSON schemas, and BCHN result files. The generated VMB tests in
+- Non-code files are copied verbatim: readmes, fixtures, JSON schemas, and
+  BCHN result files. The generated VMB tests in
   `src/lib/vmb-tests/generated/` are not tracked, although libauth tracks most
   of them (see [Building and testing](#building-and-testing)).
 
@@ -31,7 +31,7 @@ Not mirrored:
 - `src/runtime/` has no counterpart in libauth: it implements the JavaScript
   built-ins libauth relies on (`BigInt`, `JSON`, `RegExp`, `Number#toString`,
   `String#normalize`/`localeCompare`/`trim`, `Intl.Segmenter`,
-  `crypto.getRandomValues`, and `WebAssembly`). Their behavior follows Node.js
+  and `crypto.getRandomValues`). Their behavior follows Node.js
   22 (V8's `JSON.parse` error messages; Unicode 16.0 normalization data, as in
   ICU 77).
 - `tests/fast-check.rs` is a minimal, deterministic stand-in for libauth's
@@ -39,6 +39,10 @@ Not mirrored:
 - `tools/vm_bench.rs` (the `vm-bench` binary), `tools/bench-vm.mjs`, and
   `tests/fixtures/vm_benchmark_program.json` benchmark this port's VM against
   libauth's (see [VM benchmark](#vm-benchmark)).
+- libauth's `src/lib/bin/` holds WebAssembly builds of its hash functions and
+  of libsecp256k1, embedded as base64; this port implements them natively in
+  `src/lib/crypto/` (see [Native cryptography](#constraints)), so only
+  `bin.rs` and `hashes.rs` (the `HashFunction` type) remain.
 - libauth's `src/types/*.d.ts` are ambient typings for JavaScript
   dev-dependencies (bitcore-lib-cash, chuhai, rollup plugins, the native
   `secp256k1` package); they have no Rust counterpart.
@@ -65,15 +69,16 @@ Not mirrored:
 
 ## Constraints
 
-- **No dependencies.** The crate uses only `std`; `Cargo.lock` contains a
-  single package.
-- **Embedded WebAssembly.** As in libauth, the cryptographic primitives are
-  instantiated from libauth's embedded `.wasm` binaries
-  (`src/lib/bin/**/*.base64.rs`). `secp256k1.wasm` (180,069 bytes, SHA-256
-  `7b0c1694…a98b`) runs in the in-repo interpreter (`src/runtime/webassembly`).
-  For libauth's four hash modules, recognized by digest, the runtime executes
-  the hashing exports with equivalent native code (as a JIT would), using the
-  module's own memory, allocator, and `wasm-bindgen` calling convention.
+- **Native cryptography.** libauth instantiates its hash functions and
+  libsecp256k1 from embedded WebAssembly; this port implements them natively
+  with RustCrypto crates, its only dependencies: `sha1`, `sha2`, and `ripemd`
+  for hashing, and `k256` (with `hmac` for RFC6979 nonces) for secp256k1. The
+  secp256k1 operations reproduce the libsecp256k1 version that libauth compiles
+  (`bitauth/libauth-secp256k1` at `2b8e4e6`): its DER parser, its nonce
+  function (which does not reduce the message hash modulo the order), hybrid
+  public keys, unvalidated private keys in tweaks, and BCH Schnorr signatures,
+  together with libauth's zero-padding of short inputs and `RangeError` for
+  over-long ones.
 - **Mandatory VMB suite.** All 88,007 of libauth's committed VMB vectors
   (176,014 standard/nonstandard verdicts) must match libauth's committed
   results, verified together with libauth's exact error messages.
@@ -169,9 +174,17 @@ makes these choices (each is noted at the affected code):
   token amounts of 2^64 or more whose low 64 bits are below 2^32 (libauth
   encodes these with a 9-byte CompactUint), but VM introspection of such values
   (e.g. `OP_TXVERSION` for a version of `-1`) differs.
-- Mock crypto objects: `crypto` options take the concrete `Ripemd160`,
-  `Secp256k1`, `Sha256`, and `Sha512` types (instantiated from any compatible
-  WebAssembly binary), not arbitrary objects with the same methods.
+- libauth's WebAssembly-specific API is not ported: the `*Base64Bytes`
+  payloads, `getEmbedded*Binary`, `instantiate*Bytes`, `instantiateRustWasm`,
+  `instantiateSecp256k1Wasm(Bytes)`, `Secp256k1Wasm`, `ContextFlag`, and
+  `CompressionFlag` (nor the specs of the embedded binaries). `instantiate*`
+  returns the native implementations, whose incremental hashing state
+  (`init`/`update`/`final`) is this port's own encoding. `instantiateSecp256k1`
+  ignores its `randomSeed`, which libauth uses to blind libsecp256k1's
+  computations without affecting their results.
+- Mock crypto objects: a `HashFunction` is a struct of function pointers, so
+  custom hash functions can be provided, but `Secp256k1` is the native
+  implementation, so `crypto` options cannot take arbitrary secp256k1 objects.
 - `stringify` and the other `format/log` helpers operate on `Json` values; libauth
   also accepts arbitrary JavaScript values (bigints, typed arrays, functions),
   which this port represents with libauth's string markers. Likewise, the

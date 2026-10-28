@@ -254,7 +254,7 @@ fn generate_deterministic_entropy_() {
         ))
     );
     assert_eq!(
-        generate_deterministic_entropy(20, &[13.0, 4.0, 10.0], Some(&*sha256), Some(12)),
+        generate_deterministic_entropy(20, &[13.0, 4.0, 10.0], Some(&sha256), Some(12)),
         Ok(hex_to_bin(
             "6dd4f2758287be9f38e0e93c71146c76e90f83f0b8c9b49760fc0b594494607b"
         ))

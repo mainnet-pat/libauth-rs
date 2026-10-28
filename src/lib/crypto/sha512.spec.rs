@@ -4,7 +4,7 @@
 mod hash_spec_helper;
 
 use hash_spec_helper::TestHashFunction;
-use libauth::{get_embedded_sha512_binary, instantiate_sha512, instantiate_sha512_bytes};
+use libauth::instantiate_sha512;
 
 #[rustfmt::skip]
 const ABC_HASH: [u8; 64] = [221, 175, 53, 161, 147, 97, 122, 186, 204, 65, 115, 73, 174, 32, 65, 49, 18, 230, 250, 78, 137, 169, 126, 162, 10, 158, 238, 230, 75, 85, 211, 154, 33, 146, 153, 42, 39, 79, 193, 168, 54, 186, 60, 35, 163, 254, 235, 189, 69, 77, 68, 35, 100, 60, 232, 14, 42, 154, 201, 79, 165, 76, 164, 159];
@@ -230,21 +230,14 @@ const HASH_JS_DIGESTS: [&str; 100] = [
 /// `testHashFunction<Sha512>({ ... })`
 const PARAMETERS: TestHashFunction = TestHashFunction {
     abc_hash: &ABC_HASH,
-    get_embedded_binary: get_embedded_sha512_binary,
     hash_function_name: "sha512",
     instantiate: instantiate_sha512,
-    instantiate_bytes: instantiate_sha512_bytes,
     libauth_hash: &LIBAUTH_HASH,
     node_js_algorithm: "sha512",
     node_js_digests: &NODE_JS_DIGESTS,
     hash_js_digests: &HASH_JS_DIGESTS,
     test_hash: &TEST_HASH,
 };
-
-#[test]
-fn crypto_sha512_get_embedded_binary_returns_the_proper_binary() {
-    hash_spec_helper::get_embedded_binary_returns_the_proper_binary(&PARAMETERS);
-}
 
 #[test]
 fn crypto_sha512_instantiated_with_embedded_binary() {

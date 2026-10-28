@@ -11,11 +11,11 @@ use libauth::{bin_to_hex, hex_to_bin, hmac_sha256, hmac_sha512, sha256, sha512};
 /// The `vectors` macro.
 fn vectors(secret: &str, message: &str, expected_sha256: &str, expected_sha512: &str) {
     assert_eq!(
-        hmac_sha256(&hex_to_bin(secret), &hex_to_bin(message), Some(&*sha256)),
+        hmac_sha256(&hex_to_bin(secret), &hex_to_bin(message), Some(&sha256)),
         hex_to_bin(expected_sha256)
     );
     assert_eq!(
-        hmac_sha512(&hex_to_bin(secret), &hex_to_bin(message), Some(&*sha512)),
+        hmac_sha512(&hex_to_bin(secret), &hex_to_bin(message), Some(&sha512)),
         hex_to_bin(expected_sha512)
     );
 }

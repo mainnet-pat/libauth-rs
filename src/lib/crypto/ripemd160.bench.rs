@@ -11,6 +11,6 @@ use libauth::instantiate_ripemd160;
 
 fn main() {
     // benchmarkHashingFunction<Ripemd160>('ripemd160', instantiateRipemd160(), 'ripemd160');
-    let hash_function = instantiate_ripemd160().expect("the embedded binary instantiates");
+    let hash_function = instantiate_ripemd160();
     benchmark_hashing_function("ripemd160", &hash_function, "ripemd160");
 }

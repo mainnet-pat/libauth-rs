@@ -140,10 +140,10 @@ fn browser_benchmarks(
 /// The module's top-level `(async () => { ... })()`: run every browser
 /// benchmark, then `benchComplete()`.
 pub fn run() {
-    let sha1 = instantiate_sha1().expect("the embedded binary instantiates");
-    let sha256 = instantiate_sha256().expect("the embedded binary instantiates");
-    let sha512 = instantiate_sha512().expect("the embedded binary instantiates");
-    let ripemd160 = instantiate_ripemd160().expect("the embedded binary instantiates");
+    let sha1 = instantiate_sha1();
+    let sha256 = instantiate_sha256();
+    let sha512 = instantiate_sha512();
+    let ripemd160 = instantiate_ripemd160();
 
     browser_benchmarks(&sha1, "sha1", Some("SHA-1"));
     browser_benchmarks(&sha256, "sha256", Some("SHA-256"));
